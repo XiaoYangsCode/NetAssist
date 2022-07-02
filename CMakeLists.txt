@@ -12,11 +12,11 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets SerialBus)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets SerialBus)
 
-set(SRC_DIR src)
-set(HEAD_DIR head)
+set(SRC_DIR source)
+set(HEAD_DIR include)
 set(UI_DIR ui)
 file(GLOB SRC_FILES "${SRC_DIR}/*.cpp" "${UI_DIR}/*.cpp")
 file(GLOB HEAD_FILES "${HEAD_DIR}/*.h" "${UI_DIR}/*.h")
@@ -41,5 +41,5 @@ else()
         ${PROJECT_SOURCES}
     )
 endif()
-include_directories("${UI_DIR}", "${HEAD_DIR}")
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+include_directories("${UI_DIR}" "${HEAD_DIR}")
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::SerialBus)

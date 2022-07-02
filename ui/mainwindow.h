@@ -15,7 +15,11 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+private slots:
+    void on_connectPushButton_clicked();
+
 private:
     Ui::MainWindow *ui;
+    void init();
 };
 #endif // MAINWINDOW_H
