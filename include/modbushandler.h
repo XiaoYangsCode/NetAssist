@@ -10,17 +10,20 @@ class ModbusHandler : public QObject
 public:
     explicit ModbusHandler(QObject *parent = nullptr);
     ~ModbusHandler();
-    bool tryConnect(QString sIpAddress);
+    bool tryConnect(QString sIpAddress) const;
+    bool tryRead() const;
 
 private:
-    QModbusClient* m_pModbusClient;
-    void init();
+    QModbusClient* m_pModbusClient = nullptr;
+    void reset();
 
 signals:
     void modbusStateChanged(bool isConnected);
 
 private slots:
     void onStateChanged();
+    void onErrorOccurred();
+    void onReadReady();
 
 };
 
