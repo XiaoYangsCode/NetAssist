@@ -48,13 +48,16 @@ void ModbusHandler::onReadReady()
         qDebug() << tr("Reply is null");
         return;
     }
+//    const QModbusResponse response = pReply->rawResult();
+//    qDebug() << "respones: " << response.data().toHex();
     if (pReply->error() == QModbusDevice::NoError)
     {
         qDebug() << tr("Receive data");
         const QModbusDataUnit unit = pReply->result();
         for (quint16 i=0; i < unit.valueCount(); ++i)
         {
-            buffer.append(static_cast<quint16>(unit.value(i)));
+            // TODO
+//            buffer.append(static_cast<quint16>(unit.value(i)));
         }
     }
     qDebug() << tr("Result: ") << buffer;
@@ -116,18 +119,21 @@ bool ModbusHandler::tryRead() const
     }
 
     QModbusDataUnit readUnit(QModbusDataUnit::Coils, 0, 2);
-    if (QModbusReply *pRelay = m_pModbusClient->sendReadRequest(readUnit, 0))
+
+//    QModbusRequest message( QModbusRequest::ReadCoils, quint8(0x00), quint8(0x02));
+//    qDebug() << "request: " << message.data().toHex();
+    if (QModbusReply *pReply = m_pModbusClient->sendReadRequest(readUnit, 0))
     {
-        if (!pRelay->isFinished())
+        if (!pReply->isFinished())
         {
             qDebug() << tr("Send read message");
-            connect(pRelay, &QModbusReply::finished, this, &ModbusHandler::onReadReady);
+            connect(pReply, &QModbusReply::finished, this, &ModbusHandler::onReadReady);
             return true;
         }
         else
         {
             qDebug() << tr("Relay is finished");
-            delete pRelay;
+            delete pReply;
             return false;
         }
     }
