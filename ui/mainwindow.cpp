@@ -20,10 +20,31 @@ MainWindow::~MainWindow()
 
 void MainWindow::init()
 {
+    setWindowTitle(tr("NetAssist"));
+
     ui->ipLineEdit->setInputMask("000.000.000.000:0000;");
     ui->ipLineEdit->setText("127.0.0.1:5020");
     switchConnectMode(false);
 
+    initTableWidget();
+
+    ui->editCheckBox->setChecked(true);
+    switchEditMode(true);
+    switchEditButtonState(false);
+
+    m_pModbusHandler = new ModbusHandler(this);
+    connect(m_pModbusHandler, &ModbusHandler::modbusStateChanged, this, &MainWindow::onModbusStateChanged);
+
+    connect(ui->connectPushButton, &QPushButton::clicked, this, &MainWindow::onConnectButtonClicked);
+    connect(ui->readPushButton, &QPushButton::clicked, this, &MainWindow::onReadButtonClicked);
+    connect(ui->appendPushButton, &QPushButton::clicked, this, &MainWindow::onAppendRowButtonClicked);
+    connect(ui->removePushButton, &QPushButton::clicked, this, &MainWindow::onRemoveRowButtonClicked);
+    connect(ui->insertPushButton, &QPushButton::clicked, this, &MainWindow::onInsertRowButtonClicked);
+    connect(ui->editCheckBox, &QCheckBox::clicked, this, &MainWindow::onEditCheckBoxClicked);
+}
+
+void MainWindow::initTableWidget()
+{
     QStringList strList;
     strList << tr("Name") << tr("Value") << tr("Read") << tr("Write")
             << tr("Block") << tr("Adress") << tr("Ratio") << tr("BatchRead") << tr("BatchWrite");
@@ -33,20 +54,7 @@ void MainWindow::init()
     ui->tableWidget->setAlternatingRowColors(true);
 //    ui->tableWidget->resizeColumnsToContents();
 
-    ui->editCheckBox->setChecked(true);
-    switchEditMode(true);
-    switchEditButtonState(false);
-
-    connect(ui->connectPushButton, &QPushButton::clicked, this, &MainWindow::onConnectButtonClicked);
-    connect(ui->readPushButton, &QPushButton::clicked, this, &MainWindow::onReadButtonClicked);
-    connect(ui->appendPushButton, &QPushButton::clicked, this, &MainWindow::onAppendRowButtonClicked);
-    connect(ui->removePushButton, &QPushButton::clicked, this, &MainWindow::onRemoveRowButtonClicked);
-    connect(ui->insertPushButton, &QPushButton::clicked, this, &MainWindow::onInsertRowButtonClicked);
     connect(ui->tableWidget, &QTableWidget::currentCellChanged, this, &MainWindow::onTableCurrentCellChanged);
-    connect(ui->editCheckBox, &QCheckBox::clicked, this, &MainWindow::onEditCheckBoxClicked);
-
-    m_pModbusHandler = new ModbusHandler(this);
-    connect(m_pModbusHandler, &ModbusHandler::modbusStateChanged, this, &MainWindow::onModbusStateChanged);
 }
 
 void MainWindow::switchConnectMode(bool isOn)

@@ -7,8 +7,6 @@
 
 ## TODO
 
-- init tableWidget
-- title
 - tableWidget 放置编辑默认值
 - 调整UI
 - 完善读写逻辑

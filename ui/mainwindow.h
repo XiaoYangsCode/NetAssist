@@ -32,6 +32,7 @@ private:
     Ui::MainWindow *ui;
     ModbusHandler* m_pModbusHandler = nullptr;
     void init();
+    void initTableWidget();
     void switchConnectMode(bool isOn);
     void switchEditMode(bool isOn);
     void switchEditButtonState(bool isOn);
