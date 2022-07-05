@@ -2,6 +2,8 @@
 #include "./ui_mainwindow.h"
 #include <QDebug>
 #include <QPushButton>
+#include <QComboBox>
+#include "comboboxdelegate.h"
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -47,14 +49,123 @@ void MainWindow::initTableWidget()
 {
     QStringList strList;
     strList << tr("Name") << tr("Value") << tr("Read") << tr("Write")
-            << tr("Block") << tr("Adress") << tr("Ratio") << tr("BatchRead") << tr("BatchWrite");
+            << tr("Block") << tr("Address") << tr("Ratio") << tr("BatchRead") << tr("BatchWrite");
     ui->tableWidget->setColumnCount(strList.count());
     ui->tableWidget->setHorizontalHeaderLabels(strList);
     ui->tableWidget->clearContents();
     ui->tableWidget->setAlternatingRowColors(true);
-//    ui->tableWidget->resizeColumnsToContents();
+
+    // block
+    ComboBoxDelegate* pComboBoxDelegate = new ComboBoxDelegate(this);
+    QStringList strListItems;
+    strListItems << tr("DiscreteInput") << tr("Coil") << tr("InputRegister") << tr("HoldingRegister");
+    pComboBoxDelegate->setItems(strListItems);
+    ui->tableWidget->setItemDelegateForColumn(MainWindow::colBlock, pComboBoxDelegate);
+    ui->tableWidget->setColumnWidth(MainWindow::colBlock, 150);
+
+    // read and write
+    ui->tableWidget->setColumnWidth(MainWindow::colRead, 50);
+    ui->tableWidget->setColumnWidth(MainWindow::colWrite, 50);
+    // value
+    ui->tableWidget->setColumnWidth(MainWindow::colValue, 80);
+    // name
+    ui->tableWidget->setColumnWidth(MainWindow::colName, 120);
+
+    // batch read and write TODO
+    ui->tableWidget->setColumnHidden(MainWindow::colBatchRead, true);
+    ui->tableWidget->setColumnHidden(MainWindow::colBatchWrite, true);
 
     connect(ui->tableWidget, &QTableWidget::currentCellChanged, this, &MainWindow::onTableCurrentCellChanged);
+    connect(ui->tableWidget, &QTableWidget::cellChanged, this, &MainWindow::onTableCellChanged);
+}
+
+void MainWindow::createItemsARow(int nRow)
+{
+    QTableWidgetItem* pItem;
+    // name
+    pItem = new QTableWidgetItem(MainWindow::ctName);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    ui->tableWidget->setItem(nRow, MainWindow::colName, pItem);
+    // value
+    pItem = new QTableWidgetItem("--", MainWindow::ctValue);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    ui->tableWidget->setItem(nRow, MainWindow::colValue, pItem);
+    pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
+    // read
+    pItem = new QTableWidgetItem("-", MainWindow::ctRead);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    ui->tableWidget->setItem(nRow, MainWindow::colRead, pItem);
+    pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
+    // write
+    pItem = new QTableWidgetItem("-", MainWindow::ctWrite);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    ui->tableWidget->setItem(nRow, MainWindow::colWrite, pItem);
+    pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
+    // block
+    pItem = new QTableWidgetItem(MainWindow::ctBlock);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    ui->tableWidget->setItem(nRow, MainWindow::colBlock, pItem);
+//    QComboBox* pComboBox = new QComboBox();
+//    pComboBox->addItems({tr("DiscreteInput"), tr("Coil"), tr("InputRegister"), tr("HoldingRegister")tr("HoldingRegister")});
+//    ui->tableWidget->setCellWidget(nRow, MainWindow::colBlock, pComboBox);
+//    ui->tableWidget->resizeColumnToContents(MainWindow::colBlock);
+    // adress
+    pItem = new QTableWidgetItem(MainWindow::ctAddress);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    ui->tableWidget->setItem(nRow, MainWindow::colAddress, pItem);
+    // ratio
+    pItem = new QTableWidgetItem("1", MainWindow::ctRatio);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    ui->tableWidget->setItem(nRow, MainWindow::colRatio, pItem);
+    // batchread
+    pItem = new QTableWidgetItem(tr("IsRead"), MainWindow::ctBatchRead);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    pItem->setCheckState(Qt::Unchecked);
+    ui->tableWidget->setItem(nRow, MainWindow::colBatchRead, pItem);
+    pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
+    // batchwrite
+    pItem = new QTableWidgetItem(tr("IsWrite"), MainWindow::ctBatchWrite);
+    pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    pItem->setCheckState(Qt::Unchecked);
+    ui->tableWidget->setItem(nRow, MainWindow::colBatchWrite, pItem);
+    pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
+}
+
+void MainWindow::switchReadWriteState(int nRow, QString strBlockType)
+{
+    if (nRow < 0 || nRow >= ui->tableWidget->rowCount())
+    {
+        return;
+    }
+
+    auto pItemRead = ui->tableWidget->item(nRow, MainWindow::colRead);
+    auto pItemWrite = ui->tableWidget->item(nRow, MainWindow::colWrite);
+
+    if (strBlockType == tr("DiscreteInput"))
+    {
+        pItemRead->setText(tr("Yes"));
+        pItemWrite->setText(tr("No"));
+    }
+    else if (strBlockType == tr("Coil"))
+    {
+        pItemRead->setText(tr("Yes"));
+        pItemWrite->setText(tr("Yes"));
+    }
+    else if (strBlockType == tr("InputRegister"))
+    {
+        pItemRead->setText(tr("Yes"));
+        pItemWrite->setText(tr("No"));
+    }
+    else if (strBlockType == tr("HoldingRegister"))
+    {
+        pItemRead->setText(tr("Yes"));
+        pItemWrite->setText(tr("Yes"));
+    }
+    else
+    {
+        pItemRead->setText("-");
+        pItemWrite->setText("-");
+    }
 }
 
 void MainWindow::switchConnectMode(bool isOn)
@@ -121,28 +232,41 @@ void MainWindow::onReadButtonClicked()
 
 void MainWindow::onAppendRowButtonClicked()
 {
-    ui->tableWidget->insertRow(ui->tableWidget->rowCount());
+    int nRowCount = ui->tableWidget->rowCount();
+    ui->tableWidget->insertRow(nRowCount);
+    createItemsARow(nRowCount);
 }
 
 void MainWindow::onRemoveRowButtonClicked()
 {
-//    qDebug() << "Current row: " << ui->tableWidget->currentRow();
     ui->tableWidget->removeRow(ui->tableWidget->currentRow());
     ui->tableWidget->setCurrentCell(-1, -1);
 }
 
 void MainWindow::onInsertRowButtonClicked()
 {
-//    qDebug() << "Current row: " << ui->tableWidget->currentRow();
-    ui->tableWidget->insertRow(ui->tableWidget->currentRow());
-//    ui->tableWidget->setCurrentCell(-1, -1);
+    int nCurRow = ui->tableWidget->currentRow();
+    ui->tableWidget->insertRow(nCurRow);
+    createItemsARow(nCurRow);
 }
 
 void MainWindow::onTableCurrentCellChanged(int nCurRow, int nCurCol, int nPreRow, int nPreCol)
 {
     qDebug() << "current row:" << nCurRow;
     switchEditButtonState(nCurRow != -1);
-    //    ui->tableWidget->resizeColumnsToContents();
+}
+
+void MainWindow::onTableCellChanged(int nRow, int nCol)
+{
+    if (nCol == MainWindow::colBlock)
+    {
+//        qDebug() << nRow << nCol;
+        qDebug() << "ColBlock";
+        auto pItem = ui->tableWidget->item(nRow, nCol);
+//        qDebug() << pItem->text();
+//        qDebug() << pItem->data(Qt::EditRole);
+        switchReadWriteState(nRow, pItem->text());
+    }
 }
 
 void MainWindow::onEditCheckBoxClicked(bool isOn)
