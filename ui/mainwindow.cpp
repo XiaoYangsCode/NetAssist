@@ -4,6 +4,7 @@
 #include <QPushButton>
 #include <QComboBox>
 #include "comboboxdelegate.h"
+#include "lineeditdelegate.h"
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -31,8 +32,13 @@ void MainWindow::init()
     initTableWidget();
 
     ui->editCheckBox->setChecked(true);
-    switchEditMode(true);
+    switchEditGroupBox(true);
     switchEditButtonState(false);
+
+    // TODO
+    ui->batchReadPushButton->setEnabled(false);
+    ui->batchWritePushButton->setEnabled(false);
+    switchReadWriteButtonState(-1);
 
     m_pModbusHandler = new ModbusHandler(this);
     connect(m_pModbusHandler, &ModbusHandler::modbusStateChanged, this, &MainWindow::onModbusStateChanged);
@@ -71,9 +77,17 @@ void MainWindow::initTableWidget()
     // name
     ui->tableWidget->setColumnWidth(MainWindow::colName, 120);
 
+    // address
+    LineEditDelegate* pLineEditDelegate = new LineEditDelegate(this);
+    ui->tableWidget->setItemDelegateForColumn(MainWindow::colAddress, pLineEditDelegate);
+    ui->tableWidget->setColumnWidth(MainWindow::colAddress, 100);
+
     // batch read and write TODO
     ui->tableWidget->setColumnHidden(MainWindow::colBatchRead, true);
     ui->tableWidget->setColumnHidden(MainWindow::colBatchWrite, true);
+
+    // ratio TODO
+    ui->tableWidget->setColumnHidden(MainWindow::colRatio, true);
 
     connect(ui->tableWidget, &QTableWidget::currentCellChanged, this, &MainWindow::onTableCurrentCellChanged);
     connect(ui->tableWidget, &QTableWidget::cellChanged, this, &MainWindow::onTableCellChanged);
@@ -131,40 +145,32 @@ void MainWindow::createItemsARow(int nRow)
     pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
 }
 
-void MainWindow::switchReadWriteState(int nRow, QString strBlockType)
+void MainWindow::switchTableReadWriteState(int nRow)
 {
     if (nRow < 0 || nRow >= ui->tableWidget->rowCount())
     {
         return;
     }
 
+    auto pItem = ui->tableWidget->item(nRow, MainWindow::colBlock);
     auto pItemRead = ui->tableWidget->item(nRow, MainWindow::colRead);
     auto pItemWrite = ui->tableWidget->item(nRow, MainWindow::colWrite);
-
-    if (strBlockType == tr("DiscreteInput"))
+    QString strBlockType = pItem->text();
+    if (strBlockType == "")
     {
-        pItemRead->setText(tr("Yes"));
-        pItemWrite->setText(tr("No"));
+        pItemRead->setText("-");
+        pItemWrite->setText("-");
+        return;
     }
-    else if (strBlockType == tr("Coil"))
+    pItemRead->setText(tr("Yes"));
+    bool bWrite = m_pModbusHandler->getWriteStateByBlock(strBlockType);
+    if (bWrite)
     {
-        pItemRead->setText(tr("Yes"));
-        pItemWrite->setText(tr("Yes"));
-    }
-    else if (strBlockType == tr("InputRegister"))
-    {
-        pItemRead->setText(tr("Yes"));
-        pItemWrite->setText(tr("No"));
-    }
-    else if (strBlockType == tr("HoldingRegister"))
-    {
-        pItemRead->setText(tr("Yes"));
         pItemWrite->setText(tr("Yes"));
     }
     else
     {
-        pItemRead->setText("-");
-        pItemWrite->setText("-");
+        pItemWrite->setText(tr("No"));
     }
 }
 
@@ -184,7 +190,7 @@ void MainWindow::switchConnectMode(bool isOn)
     }
 }
 
-void MainWindow::switchEditMode(bool isOn)
+void MainWindow::switchEditGroupBox(bool isOn)
 {
     if (isOn)
     {
@@ -218,6 +224,22 @@ void MainWindow::switchEditButtonState(bool isOn)
             ui->removePushButton->setEnabled(false);
         }
     }
+}
+
+void MainWindow::switchReadWriteButtonState(int nRow)
+{
+    if (nRow == -1)
+    {
+        ui->readPushButton->setEnabled(false);
+        ui->writePushButton->setEnabled(false);
+        return;
+    }
+
+    auto pItem = ui->tableWidget->item(nRow, MainWindow::colBlock);
+    QString strBlockType = pItem->text();
+    ui->readPushButton->setEnabled(strBlockType.isEmpty());
+    bool bWrite = m_pModbusHandler->getWriteStateByBlock(strBlockType);
+    ui->writePushButton->setEnabled(bWrite);
 }
 
 void MainWindow::onConnectButtonClicked()
@@ -254,24 +276,25 @@ void MainWindow::onTableCurrentCellChanged(int nCurRow, int nCurCol, int nPreRow
 {
     qDebug() << "current row:" << nCurRow;
     switchEditButtonState(nCurRow != -1);
+    if (nCurRow != nPreRow)
+    {
+        switchReadWriteButtonState(nCurRow);
+    }
 }
 
 void MainWindow::onTableCellChanged(int nRow, int nCol)
 {
     if (nCol == MainWindow::colBlock)
     {
-//        qDebug() << nRow << nCol;
         qDebug() << "ColBlock";
-        auto pItem = ui->tableWidget->item(nRow, nCol);
-//        qDebug() << pItem->text();
-//        qDebug() << pItem->data(Qt::EditRole);
-        switchReadWriteState(nRow, pItem->text());
+        switchTableReadWriteState(nRow);
+        switchReadWriteButtonState(nRow);
     }
 }
 
 void MainWindow::onEditCheckBoxClicked(bool isOn)
 {
-    switchEditMode(isOn);
+    switchEditGroupBox(isOn);
 }
 
 void MainWindow::onModbusStateChanged(bool isOn)

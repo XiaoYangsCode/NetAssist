@@ -39,9 +39,10 @@ private:
     void init();
     void initTableWidget();
     void createItemsARow(int nRow);
-    void switchReadWriteState(int nRow, QString strBlockType);
+    void switchTableReadWriteState(int nRow);
     void switchConnectMode(bool isOn);
-    void switchEditMode(bool isOn);
+    void switchEditGroupBox(bool isOn);
     void switchEditButtonState(bool isOn);
+    void switchReadWriteButtonState(int nRow);
 };
 #endif // MAINWINDOW_H

@@ -13,6 +13,9 @@ public:
     bool tryConnect(QString sIpAddress) const;
     bool tryRead() const;
 
+    enum BlockType {DiscreteInput, Coil, InputRegister, HoldingRegister};
+    bool getWriteStateByBlock(const QString& strBlockType) const;
+
 private:
     QModbusClient* m_pModbusClient = nullptr;
     void reset();

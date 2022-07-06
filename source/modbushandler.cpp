@@ -145,4 +145,34 @@ bool ModbusHandler::tryRead() const
 
 }
 
+bool ModbusHandler::getWriteStateByBlock(const QString &strBlockType) const
+{
+    if (strBlockType == tr("DiscreteInput"))
+    {
+        return false;
+    }
+    else if (strBlockType == tr("Coil"))
+    {
+        return true;
+    }
+    else if (strBlockType == tr("InputRegister"))
+    {
+        return false;
+    }
+    else if (strBlockType == tr("HoldingRegister"))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+
+
+
+
+
+
 
