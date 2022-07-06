@@ -17,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    delete m_pCurRowLabel;
     delete m_pModbusHandler;
     delete ui;
 }
@@ -39,6 +40,11 @@ void MainWindow::init()
     ui->batchReadPushButton->setEnabled(false);
     ui->batchWritePushButton->setEnabled(false);
     switchReadWriteButtonState(-1);
+
+    // status bar
+    m_pCurRowLabel = new QLabel(this);
+    m_pCurRowLabel->setText(tr("Not Choose"));
+    ui->statusbar->addWidget(m_pCurRowLabel);
 
     m_pModbusHandler = new ModbusHandler(this);
     connect(m_pModbusHandler, &ModbusHandler::modbusStateChanged, this, &MainWindow::onModbusStateChanged);
@@ -156,7 +162,7 @@ void MainWindow::switchTableReadWriteState(int nRow)
     auto pItemRead = ui->tableWidget->item(nRow, MainWindow::colRead);
     auto pItemWrite = ui->tableWidget->item(nRow, MainWindow::colWrite);
     QString strBlockType = pItem->text();
-    if (strBlockType == "")
+    if (strBlockType.isEmpty())
     {
         pItemRead->setText("-");
         pItemWrite->setText("-");
@@ -274,7 +280,11 @@ void MainWindow::onInsertRowButtonClicked()
 
 void MainWindow::onTableCurrentCellChanged(int nCurRow, int nCurCol, int nPreRow, int nPreCol)
 {
-    qDebug() << "current row:" << nCurRow;
+    if (nCurRow >= 0)
+        m_pCurRowLabel->setText(tr("Current Row: %1").arg(nCurRow + 1));
+    else
+        m_pCurRowLabel->setText(tr("Not Choose"));
+
     switchEditButtonState(nCurRow != -1);
     if (nCurRow != nPreRow)
     {

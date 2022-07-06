@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QTableWidgetItem>
+#include <QLabel>
 #include "modbushandler.h"
 
 QT_BEGIN_NAMESPACE
@@ -36,6 +37,7 @@ private:
     enum FieldColNum{colName=0,colValue,colRead,colWrite,colBlock,colAddress,colRatio,colBatchRead,colBatchWrite};
     Ui::MainWindow *ui;
     ModbusHandler* m_pModbusHandler = nullptr;
+    QLabel* m_pCurRowLabel;
     void init();
     void initTableWidget();
     void createItemsARow(int nRow);
