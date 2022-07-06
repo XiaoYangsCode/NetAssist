@@ -243,7 +243,7 @@ void MainWindow::switchReadWriteButtonState(int nRow)
 
     auto pItem = ui->tableWidget->item(nRow, MainWindow::colBlock);
     QString strBlockType = pItem->text();
-    ui->readPushButton->setEnabled(strBlockType.isEmpty());
+    ui->readPushButton->setEnabled(!strBlockType.isEmpty());
     bool bWrite = m_pModbusHandler->getWriteStateByBlock(strBlockType);
     ui->writePushButton->setEnabled(bWrite);
 }
