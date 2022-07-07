@@ -26,6 +26,7 @@ void MainWindow::init()
 {
     setWindowTitle(tr("NetAssist"));
     setFixedSize(990, 610);
+    setWindowIcon(QIcon(":/icon/icon.png"));
 
     ui->ipLineEdit->setInputMask("000.000.000.000:0000;");
     ui->ipLineEdit->setText("127.0.0.1:5020");

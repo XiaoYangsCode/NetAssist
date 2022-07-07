@@ -18,16 +18,20 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets SerialBus)
 set(SRC_DIR source)
 set(HEAD_DIR include)
 set(UI_DIR ui)
+set(REC_DIR resource)
 file(GLOB SRC_FILES "${SRC_DIR}/*.cpp" "${UI_DIR}/*.cpp")
 file(GLOB HEAD_FILES "${HEAD_DIR}/*.h" "${UI_DIR}/*.h")
 file(GLOB UI_FILES "${UI_DIR}/*.ui")
-source_group("Ui" FILES ${UI_FILES})
+file(GLOB REC_FILES "${REC_DIR}/*.qrc")
+source_group("Ui Files" FILES ${UI_FILES})
+source_group("Resource Files" FILES ${REC_FILES})
 
 set(PROJECT_SOURCES
         main.cpp
         ${SRC_FILES}
         ${HEAD_FILES}
         ${UI_FILES}
+        ${REC_FILES}
     )
 
 
