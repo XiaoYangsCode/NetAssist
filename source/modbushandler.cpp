@@ -3,6 +3,8 @@
 #include <QUrl>
 #include <QVariant>
 
+QRegularExpression ModbusHandler::s_removeSpaceReg = QRegularExpression("\\s");
+
 ModbusHandler::ModbusHandler(QObject *parent)
     : QObject{parent}
 {
@@ -54,13 +56,24 @@ void ModbusHandler::onReadReady()
     {
         qDebug() << tr("Receive data");
         const QModbusDataUnit unit = pReply->result();
+        // if (unit.registerType() == QModbusDataUnit::Coils ||
+            // unit.registerType() == QModbusDataUnit::InputRegisters)
+        // {
+            // qDebug() << pReply->rawResult();
+            // qDebug() << pReply->rawResult().data();
+        // }
+
         for (quint16 i=0; i < unit.valueCount(); ++i)
         {
-            // TODO
-//            buffer.append(static_cast<quint16>(unit.value(i)));
+           buffer.append(static_cast<quint16>(unit.value(i)));
         }
+
+        qDebug() << tr("Result: ") << buffer;
+        qDebug() << unit.startAddress();
+
+        if (buffer.count() > 0)
+            emit modbusReceive(getBlockStringByType(unit.registerType()), unit.startAddress(), buffer);
     }
-    qDebug() << tr("Result: ") << buffer;
     pReply->deleteLater();
 }
 
@@ -111,18 +124,19 @@ bool ModbusHandler::tryConnect(QString sIpAddress) const
     }
 }
 
-bool ModbusHandler::tryRead() const
+bool ModbusHandler::tryRead(QString sBlockType, QString sAddress, int nSlaveId) const
 {
     if (m_pModbusClient->state() != QModbusDevice::ConnectedState)
     {
         return false;
     }
 
-    QModbusDataUnit readUnit(QModbusDataUnit::Coils, 0, 2);
+    QModbusDataUnit readUnit = readRequest(sBlockType, sAddress);
 
+    // QModbusDataUnit readUnit(QModbusDataUnit::Coils, 0, 2);
 //    QModbusRequest message( QModbusRequest::ReadCoils, quint8(0x00), quint8(0x02));
 //    qDebug() << "request: " << message.data().toHex();
-    if (QModbusReply *pReply = m_pModbusClient->sendReadRequest(readUnit, 0))
+    if (QModbusReply *pReply = m_pModbusClient->sendReadRequest(readUnit, nSlaveId))
     {
         if (!pReply->isFinished())
         {
@@ -145,21 +159,34 @@ bool ModbusHandler::tryRead() const
 
 }
 
-bool ModbusHandler::getWriteStateByBlock(const QString &strBlockType) const
+QModbusDataUnit ModbusHandler::readRequest(QString sBlockType, QString sAddress) const
 {
-    if (strBlockType == tr("DiscreteInput"))
+    QModbusDataUnit::RegisterType eBlockType = getBlockTypeByString(sBlockType);
+    if (eBlockType == QModbusDataUnit::RegisterType::Invalid)
+    {
+        qDebug() << "Block Type is null";
+        return QModbusDataUnit();
+    }
+
+    int nDecAddress = getAddressByString(sAddress);
+    return QModbusDataUnit(eBlockType, nDecAddress, 1);
+}
+
+bool ModbusHandler::getWriteStateByBlock(const QString &sBlockType) const
+{
+    if (sBlockType == tr("DiscreteInput"))
     {
         return false;
     }
-    else if (strBlockType == tr("Coil"))
+    else if (sBlockType == tr("Coil"))
     {
         return true;
     }
-    else if (strBlockType == tr("InputRegister"))
+    else if (sBlockType == tr("InputRegister"))
     {
         return false;
     }
-    else if (strBlockType == tr("HoldingRegister"))
+    else if (sBlockType == tr("HoldingRegister"))
     {
         return true;
     }
@@ -167,6 +194,70 @@ bool ModbusHandler::getWriteStateByBlock(const QString &strBlockType) const
     {
         return false;
     }
+}
+
+QModbusDataUnit::RegisterType ModbusHandler::getBlockTypeByString(QString& sBlockType) const
+{
+    if (sBlockType == tr("DiscreteInput"))
+    {
+        return QModbusDataUnit::RegisterType::DiscreteInputs;
+    }
+    else if (sBlockType == tr("Coil"))
+    {
+        return QModbusDataUnit::RegisterType::Coils;
+    }
+    else if (sBlockType == tr("InputRegister"))
+    {
+        return QModbusDataUnit::RegisterType::InputRegisters;
+    }
+    else if (sBlockType == tr("HoldingRegister"))
+    {
+        return QModbusDataUnit::RegisterType::HoldingRegisters;
+    }
+    else
+    {
+        return QModbusDataUnit::RegisterType::Invalid;
+    }
+}
+
+QString ModbusHandler::getBlockStringByType(QModbusDataUnit::RegisterType eBlockType) const
+{
+    if (eBlockType == QModbusDataUnit::RegisterType::DiscreteInputs)
+    {
+        return tr("DiscreteInput");
+    }
+    else if (eBlockType == QModbusDataUnit::RegisterType::Coils)
+    {
+        return tr("Coil");
+    }
+    else if (eBlockType == QModbusDataUnit::RegisterType::InputRegisters)
+    {
+        return tr("InputRegister");
+    }
+    else if (eBlockType == QModbusDataUnit::RegisterType::HoldingRegisters)
+    {
+        return tr("HoldingRegister");
+    }
+    else
+    {
+        return "";
+    }
+}
+
+int ModbusHandler::getAddressByString(QString sAddress) const
+{
+    QString sHexAddress = sAddress.remove(ModbusHandler::s_removeSpaceReg);
+    bool ok;
+    int nDecAddress = sHexAddress.toInt(&ok, 16);
+    if (!ok)
+        qDebug() << "sAddress is error";
+    return nDecAddress;
+}
+
+QString ModbusHandler::getValueStringByNum(quint16 nValue)
+{
+    QString sValue = QString("%1").arg(nValue, 4, 16, QLatin1Char('0'));
+    return sValue.insert(2, ' ');
 }
 
 

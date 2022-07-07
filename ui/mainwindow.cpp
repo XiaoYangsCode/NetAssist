@@ -32,8 +32,9 @@ void MainWindow::init()
 
     initTableWidget();
 
-    ui->editCheckBox->setChecked(true);
-    switchEditGroupBox(true);
+    // ui->editCheckBox->setChecked(true);
+    // switchEditGroupBox(true);
+    ui->readWriteGroupBox->setEnabled(false);
     switchEditButtonState(false);
 
     // TODO
@@ -48,13 +49,13 @@ void MainWindow::init()
 
     m_pModbusHandler = new ModbusHandler(this);
     connect(m_pModbusHandler, &ModbusHandler::modbusStateChanged, this, &MainWindow::onModbusStateChanged);
+    connect(m_pModbusHandler, &ModbusHandler::modbusReceive, this, &MainWindow::onModbusReceive);
 
     connect(ui->connectPushButton, &QPushButton::clicked, this, &MainWindow::onConnectButtonClicked);
     connect(ui->readPushButton, &QPushButton::clicked, this, &MainWindow::onReadButtonClicked);
     connect(ui->appendPushButton, &QPushButton::clicked, this, &MainWindow::onAppendRowButtonClicked);
     connect(ui->removePushButton, &QPushButton::clicked, this, &MainWindow::onRemoveRowButtonClicked);
     connect(ui->insertPushButton, &QPushButton::clicked, this, &MainWindow::onInsertRowButtonClicked);
-    connect(ui->editCheckBox, &QCheckBox::clicked, this, &MainWindow::onEditCheckBoxClicked);
 }
 
 void MainWindow::initTableWidget()
@@ -79,13 +80,15 @@ void MainWindow::initTableWidget()
     ui->tableWidget->setColumnWidth(MainWindow::colRead, 50);
     ui->tableWidget->setColumnWidth(MainWindow::colWrite, 50);
     // value
-    ui->tableWidget->setColumnWidth(MainWindow::colValue, 80);
+    LineEditDelegate* pLineEditDelegate = new LineEditDelegate(this);
+    ui->tableWidget->setItemDelegateForColumn(MainWindow::colValue, pLineEditDelegate);
+    ui->tableWidget->setColumnWidth(MainWindow::colValue, 100);
     // name
     ui->tableWidget->setColumnWidth(MainWindow::colName, 120);
 
     // address
-    LineEditDelegate* pLineEditDelegate = new LineEditDelegate(this);
-    ui->tableWidget->setItemDelegateForColumn(MainWindow::colAddress, pLineEditDelegate);
+    LineEditDelegate* pLineEditDelegate1 = new LineEditDelegate(this);
+    ui->tableWidget->setItemDelegateForColumn(MainWindow::colAddress, pLineEditDelegate1);
     ui->tableWidget->setColumnWidth(MainWindow::colAddress, 100);
 
     // batch read and write TODO
@@ -110,7 +113,7 @@ void MainWindow::createItemsARow(int nRow)
     pItem = new QTableWidgetItem("--", MainWindow::ctValue);
     pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
     ui->tableWidget->setItem(nRow, MainWindow::colValue, pItem);
-    pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
+    // pItem->setFlags(pItem->flags() & ~Qt::ItemIsEditable);
     // read
     pItem = new QTableWidgetItem("-", MainWindow::ctRead);
     pItem->setTextAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
@@ -187,28 +190,14 @@ void MainWindow::switchConnectMode(bool isOn)
         ui->connectPushButton->setText(tr("Disconnect"));
         ui->ipLineEdit->setEnabled(false);
         ui->slaveSpinBox->setEnabled(false);
+        ui->readWriteGroupBox->setEnabled(true);
     }
     else
     {
         ui->connectPushButton->setText(tr("Connect"));
         ui->ipLineEdit->setEnabled(true);
         ui->slaveSpinBox->setEnabled(true);
-    }
-}
-
-void MainWindow::switchEditGroupBox(bool isOn)
-{
-    if (isOn)
-    {
-        ui->editGroupBox->setEnabled(true);
         ui->readWriteGroupBox->setEnabled(false);
-        ui->tableWidget->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked);
-    }
-    else
-    {
-        ui->editGroupBox->setEnabled(false);
-        ui->readWriteGroupBox->setEnabled(true);
-        ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
     }
 }
 
@@ -255,7 +244,12 @@ void MainWindow::onConnectButtonClicked()
 
 void MainWindow::onReadButtonClicked()
 {
-    m_pModbusHandler->tryRead();
+    if (m_nCurRow == -1)
+        return;
+
+    auto pBlockItem = ui->tableWidget->item(m_nCurRow, MainWindow::colBlock);
+    auto pAddressItem = ui->tableWidget->item(m_nCurRow, MainWindow::colAddress);
+    m_pModbusHandler->tryRead(pBlockItem->text(), pAddressItem->text(), ui->slaveSpinBox->value());
 }
 
 void MainWindow::onAppendRowButtonClicked()
@@ -284,6 +278,7 @@ void MainWindow::onTableCurrentCellChanged(int nCurRow, int nCurCol, int nPreRow
         m_pCurRowLabel->setText(tr("Current Row: %1").arg(nCurRow + 1));
     else
         m_pCurRowLabel->setText(tr("Not Choose"));
+    m_nCurRow = nCurRow;
 
     switchEditButtonState(nCurRow != -1);
     if (nCurRow != nPreRow)
@@ -296,20 +291,32 @@ void MainWindow::onTableCellChanged(int nRow, int nCol)
 {
     if (nCol == MainWindow::colBlock)
     {
-        qDebug() << "ColBlock";
         switchTableReadWriteState(nRow);
         switchReadWriteButtonState(nRow);
     }
 }
 
-void MainWindow::onEditCheckBoxClicked(bool isOn)
-{
-    switchEditGroupBox(isOn);
-}
-
 void MainWindow::onModbusStateChanged(bool isOn)
 {
     switchConnectMode(isOn);
+}
+
+void MainWindow::onModbusReceive(QString sBlockType, int nAddress, QVector<quint16> buffer)
+{
+    qDebug() << sBlockType << nAddress << QString::number(buffer.value(0), 16);
+    for (int i = 0; i < ui->tableWidget->rowCount(); ++i)
+    {
+        auto pBlockItem = ui->tableWidget->item(i, MainWindow::colBlock);
+        auto pAddressItem = ui->tableWidget->item(i, MainWindow::colAddress);
+        auto pValueItem = ui->tableWidget->item(i, MainWindow::colValue);
+        int nItemAddress = m_pModbusHandler->getAddressByString(pAddressItem->text());
+        if (sBlockType == pBlockItem->text() &&
+            nAddress == nItemAddress)
+        {
+            QString sValue = m_pModbusHandler->getValueStringByNum(buffer.value(0));
+            pValueItem->setText(sValue);
+        }
+    }
 }
 
 
