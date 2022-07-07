@@ -25,6 +25,7 @@ MainWindow::~MainWindow()
 void MainWindow::init()
 {
     setWindowTitle(tr("NetAssist"));
+    setFixedSize(990, 610);
 
     ui->ipLineEdit->setInputMask("000.000.000.000:0000;");
     ui->ipLineEdit->setText("127.0.0.1:5020");
