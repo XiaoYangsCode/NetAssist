@@ -52,6 +52,7 @@ void MainWindow::init()
     m_pModbusHandler = new ModbusHandler(this);
     connect(m_pModbusHandler, &ModbusHandler::modbusStateChanged, this, &MainWindow::onModbusStateChanged);
     connect(m_pModbusHandler, &ModbusHandler::modbusReceive, this, &MainWindow::onModbusReceive);
+    connect(m_pModbusHandler, &ModbusHandler::modbusLog, this, &MainWindow::onAppendLog);
 
     connect(ui->connectPushButton, &QPushButton::clicked, this, &MainWindow::onConnectButtonClicked);
     connect(ui->readPushButton, &QPushButton::clicked, this, &MainWindow::onReadButtonClicked);
@@ -59,6 +60,7 @@ void MainWindow::init()
     connect(ui->appendPushButton, &QPushButton::clicked, this, &MainWindow::onAppendRowButtonClicked);
     connect(ui->removePushButton, &QPushButton::clicked, this, &MainWindow::onRemoveRowButtonClicked);
     connect(ui->insertPushButton, &QPushButton::clicked, this, &MainWindow::onInsertRowButtonClicked);
+    connect(ui->clearLogPushButton, &QPushButton::clicked, this, &MainWindow::onClearLogButtonClicked);
 }
 
 void MainWindow::initTableWidget()
@@ -287,6 +289,11 @@ void MainWindow::onInsertRowButtonClicked()
     createItemsARow(nCurRow);
 }
 
+void MainWindow::onClearLogButtonClicked()
+{
+    ui->logTextBrowser->clear();
+}
+
 void MainWindow::onTableCurrentCellChanged(int nCurRow, int nCurCol, int nPreRow, int nPreCol)
 {
     if (nCurRow >= 0)
@@ -311,22 +318,25 @@ void MainWindow::onTableCellChanged(int nRow, int nCol)
     }
 }
 
+void MainWindow::onAppendLog(QString sLog)
+{
+    ui->logTextBrowser->append(sLog);
+}
+
 void MainWindow::onModbusStateChanged(bool isOn)
 {
     switchConnectMode(isOn);
 }
 
-void MainWindow::onModbusReceive(QString sBlockType, int nAddress, QVector<quint16> buffer)
+void MainWindow::onModbusReceive(QString sBlockType, QString sAddress, QVector<quint16> buffer)
 {
-    qDebug() << sBlockType << nAddress << QString::number(buffer.value(0), 16);
     for (int i = 0; i < ui->tableWidget->rowCount(); ++i)
     {
         auto pBlockItem = ui->tableWidget->item(i, MainWindow::colBlock);
         auto pAddressItem = ui->tableWidget->item(i, MainWindow::colAddress);
         auto pValueItem = ui->tableWidget->item(i, MainWindow::colValue);
-        int nItemAddress = m_pModbusHandler->getValueByString(pAddressItem->text());
         if (sBlockType == pBlockItem->text() &&
-            nAddress == nItemAddress)
+            sAddress == pAddressItem->text())
         {
             QString sValue = m_pModbusHandler->getStringByValue(buffer.value(0));
             pValueItem->setText(sValue);

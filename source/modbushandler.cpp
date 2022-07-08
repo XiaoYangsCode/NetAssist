@@ -24,12 +24,27 @@ void ModbusHandler::onStateChanged()
         return;
     if (m_pModbusClient->state() == QModbusDevice::ConnectedState)
     {
-        qDebug() << tr("State Connected");
+        emit modbusLog(tr("Modbus Connect State: Connected"));
         emit modbusStateChanged(true);
+    }
+    else if (m_pModbusClient->state() == QModbusDevice::UnconnectedState)
+    {
+        emit modbusLog(tr("Modbus Connect State: Unconnected"));
+        emit modbusStateChanged(false);
+    }
+    else if (m_pModbusClient->state() == QModbusDevice::ConnectingState)
+    {
+        emit modbusLog(tr("Modbus Connect State: Connecting"));
+        emit modbusStateChanged(false);
+    }
+    else if (m_pModbusClient->state() == QModbusDevice::ClosingState)
+    {
+        emit modbusLog(tr("Modbus Connect State: Closing"));
+        emit modbusStateChanged(false);
     }
     else
     {
-        qDebug() << tr("State Disconnected");
+        emit modbusLog(tr("Modbus Connect State: Unknown State"));
         emit modbusStateChanged(false);
     }
 }
@@ -47,32 +62,40 @@ void ModbusHandler::onReadReady()
     QModbusReply* pReply = qobject_cast<QModbusReply*>(sender());
     if (!pReply)
     {
-        qDebug() << tr("Reply is null");
+        qDebug() << tr("Read reply is null");
         return;
     }
 //    const QModbusResponse response = pReply->rawResult();
 //    qDebug() << "respones: " << response.data().toHex();
     if (pReply->error() == QModbusDevice::NoError)
     {
-        qDebug() << tr("Receive data");
         const QModbusDataUnit unit = pReply->result();
-        // if (unit.registerType() == QModbusDataUnit::Coils ||
-            // unit.registerType() == QModbusDataUnit::InputRegisters)
-        // {
-            // qDebug() << pReply->rawResult();
-            // qDebug() << pReply->rawResult().data();
-        // }
 
         for (quint16 i=0; i < unit.valueCount(); ++i)
         {
            buffer.append(static_cast<quint16>(unit.value(i)));
         }
 
-        qDebug() << tr("Result: ") << buffer;
-        qDebug() << unit.startAddress();
+        QString sBlockType = getBlockStringByType(unit.registerType());
+        QString sAddress = getStringByValue(unit.startAddress());
+        QString sBuffer;
+        sBuffer.append("(");
+        foreach(quint16 nValue, buffer)
+        {
+            sBuffer.append(QString::number(nValue));
+            sBuffer.append(", ");
+        }
+        sBuffer.append(")");
+
+        emit modbusLog(tr("Receive read data: BlockType %1, Start Address %2, Buffer %3")
+                       .arg(sBlockType, sAddress, sBuffer));
 
         if (buffer.count() > 0)
-            emit modbusReceive(getBlockStringByType(unit.registerType()), unit.startAddress(), buffer);
+            emit modbusReceive(sBlockType, sAddress, buffer);
+    }
+    else
+    {
+        emit modbusLog(tr("Receive read data: fail"));
     }
     pReply->deleteLater();
 }
@@ -82,7 +105,7 @@ void ModbusHandler::onWriteReady()
     QModbusReply* pReply = qobject_cast<QModbusReply*>(sender());
     if (!pReply)
     {
-        qDebug() << tr("Reply is null");
+        qDebug() << tr("Write reply is null");
         return;
     }
     if (pReply->error() == QModbusDevice::ProtocolError)
@@ -90,14 +113,22 @@ void ModbusHandler::onWriteReady()
         QString sMsg = tr("Write response error: %1 (Modbus exception: 0x%2)").
                 arg(pReply->errorString()).arg(pReply->rawResult().exceptionCode(), -1, 16);
         qDebug() << sMsg;
+        emit modbusLog(tr("Receive write data: fail"));
     }
     else if (pReply->error() != QModbusDevice::NoError)
     {
         QString sMsg = tr("Write response error: %1 (code: 0x%2)").
                 arg(pReply->errorString()).arg(pReply->error(), -1, 16);
         qDebug() << sMsg;
+        emit modbusLog(tr("Receive write data: fail"));
     }
-
+    {
+        const QModbusDataUnit unit = pReply->result();
+        QString sBlockType = getBlockStringByType(unit.registerType());
+        QString sAddress = getStringByValue(unit.startAddress());
+        emit modbusLog(tr("Receive write data: BlockType %1, Start Address %2")
+                       .arg(sBlockType, sAddress));
+    }
 
     pReply->deleteLater();
 }
@@ -138,7 +169,6 @@ bool ModbusHandler::tryConnect(QString sIpAddress) const
         }
         else
         {
-            qDebug() << tr("Connection initialize success");
             return true;
         }
     }
@@ -149,7 +179,7 @@ bool ModbusHandler::tryConnect(QString sIpAddress) const
     }
 }
 
-bool ModbusHandler::tryRead(QString sBlockType, QString sAddress, int nSlaveId) const
+bool ModbusHandler::tryRead(QString sBlockType, QString sAddress, int nSlaveId)
 {
     if (m_pModbusClient->state() != QModbusDevice::ConnectedState)
     {
@@ -160,18 +190,18 @@ bool ModbusHandler::tryRead(QString sBlockType, QString sAddress, int nSlaveId) 
 
     // QModbusDataUnit readUnit(QModbusDataUnit::Coils, 0, 2);
 //    QModbusRequest message( QModbusRequest::ReadCoils, quint8(0x00), quint8(0x02));
-//    qDebug() << "request: " << message.data().toHex();
+    emit modbusLog(tr("Send read message: BlockType %1, Start Address %2, SlaveId %3")
+                   .arg(sBlockType, sAddress).arg(nSlaveId));
     if (QModbusReply *pReply = m_pModbusClient->sendReadRequest(readUnit, nSlaveId))
     {
         if (!pReply->isFinished())
         {
-            qDebug() << tr("Send read message");
             connect(pReply, &QModbusReply::finished, this, &ModbusHandler::onReadReady);
             return true;
         }
         else
         {
-            qDebug() << tr("Relay is finished");
+            qDebug() << tr("Read relay is finished");
             delete pReply;
             return false;
         }
@@ -184,7 +214,7 @@ bool ModbusHandler::tryRead(QString sBlockType, QString sAddress, int nSlaveId) 
 
 }
 
-bool ModbusHandler::tryWrite(QString sBlockType, QString sAddress, QString sValue, int nSlaveId) const
+bool ModbusHandler::tryWrite(QString sBlockType, QString sAddress, QString sValue, int nSlaveId)
 {
     if (m_pModbusClient->state() != QModbusDevice::ConnectedState)
     {
@@ -193,17 +223,19 @@ bool ModbusHandler::tryWrite(QString sBlockType, QString sAddress, QString sValu
 
     QModbusDataUnit writeUnit = writeRequest(sBlockType, sAddress, sValue);
 
+    emit modbusLog(tr("Send write message: BlockType %1, Start Address %2, Value %3, SlaveId %4")
+                   .arg(sBlockType, sAddress, sValue).arg(nSlaveId));
+
     if (QModbusReply *pReply = m_pModbusClient->sendWriteRequest(writeUnit, nSlaveId))
     {
         if (!pReply->isFinished())
         {
-            qDebug() << tr("Send write message");
             connect(pReply, &QModbusReply::finished, this, &ModbusHandler::onWriteReady);
             return true;
         }
         else
         {
-            qDebug() << tr("Relay is finished");
+            qDebug() << tr("Write relay is finished");
             delete pReply;
             return false;
         }
@@ -222,7 +254,7 @@ QModbusDataUnit ModbusHandler::readRequest(QString sBlockType, QString sAddress)
     QModbusDataUnit::RegisterType eBlockType = getBlockTypeByString(sBlockType);
     if (eBlockType == QModbusDataUnit::RegisterType::Invalid)
     {
-        qDebug() << "Block Type is null";
+        qDebug() << "Read Block Type is error";
         return QModbusDataUnit();
     }
 
@@ -235,7 +267,7 @@ QModbusDataUnit ModbusHandler::writeRequest(QString sBlockType, QString sAddress
     QModbusDataUnit::RegisterType eBlockType = getBlockTypeByString(sBlockType);
     if (eBlockType == QModbusDataUnit::RegisterType::Invalid)
     {
-        qDebug() << "Block Type is null";
+        qDebug() << "Write Block Type is error";
         return QModbusDataUnit();
     }
 
@@ -324,7 +356,7 @@ int ModbusHandler::getValueByString(QString sValue) const
     bool ok;
     int nDecValue = sHexValue.toInt(&ok, 16);
     if (!ok)
-        qDebug() << "sAddress is error";
+        qDebug() << "sValue is error";
     return nDecValue;
 }
 

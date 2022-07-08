@@ -25,11 +25,13 @@ private slots:
     void onAppendRowButtonClicked();
     void onRemoveRowButtonClicked();
     void onInsertRowButtonClicked();
+    void onClearLogButtonClicked();
     void onTableCurrentCellChanged(int nCurRow, int nCurCol, int nPreRow, int nPreCol);
     void onTableCellChanged(int nRow, int nCol);
+    void onAppendLog(QString sLog);
 
     void onModbusStateChanged(bool isOn);
-    void onModbusReceive(QString sBlockType, int nAddress, QVector<quint16> buffer);
+    void onModbusReceive(QString sBlockType, QString sAddress, QVector<quint16> buffer);
 
 private:
     enum CellType{ctName=1000,ctValue,ctRead,ctWrite,ctBlock,ctAddress,ctRatio,ctBatchRead,ctBatchWrite};

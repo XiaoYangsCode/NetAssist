@@ -13,8 +13,8 @@ public:
     explicit ModbusHandler(QObject *parent = nullptr);
     ~ModbusHandler();
     bool tryConnect(QString sIpAddress) const;
-    bool tryRead(QString sBlockType, QString sAddress, int nSlaveId) const;
-    bool tryWrite(QString sBlockType, QString sAddress, QString sValue, int nSlaveId) const;
+    bool tryRead(QString sBlockType, QString sAddress, int nSlaveId);
+    bool tryWrite(QString sBlockType, QString sAddress, QString sValue, int nSlaveId);
     QModbusDataUnit readRequest(QString sBlockType, QString sAddress) const;
     QModbusDataUnit writeRequest(QString sBlockType, QString sAddress, QString sValue) const;
 
@@ -31,7 +31,7 @@ private:
 
 signals:
     void modbusStateChanged(bool isConnected);
-    void modbusReceive(QString eBlockType, int nAddress, QVector<quint16> buffer);
+    void modbusReceive(QString sBlockType, QString sAddress, QVector<quint16> buffer);
     void modbusLog(QString sLog);
 
 private slots:
