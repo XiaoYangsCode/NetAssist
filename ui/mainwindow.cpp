@@ -254,6 +254,11 @@ void MainWindow::onReadButtonClicked()
 
     auto pBlockItem = ui->tableWidget->item(m_nCurRow, MainWindow::colBlock);
     auto pAddressItem = ui->tableWidget->item(m_nCurRow, MainWindow::colAddress);
+    if (pAddressItem->text().isEmpty() || pAddressItem->text() == "--")
+    {
+        onAppendLog(tr("Read Address is error"));
+        return;
+    }
     m_pModbusHandler->tryRead(pBlockItem->text(), pAddressItem->text(), ui->slaveSpinBox->value());
 }
 
@@ -265,6 +270,18 @@ void MainWindow::onWriteButtonClicked()
     auto pBlockItem = ui->tableWidget->item(m_nCurRow, MainWindow::colBlock);
     auto pAddressItem = ui->tableWidget->item(m_nCurRow, MainWindow::colAddress);
     auto pValueItem = ui->tableWidget->item(m_nCurRow, MainWindow::colValue);
+
+    if (pAddressItem->text().isEmpty() || pAddressItem->text() == "--")
+    {
+        onAppendLog(tr("Write Address is error"));
+        return;
+    }
+    if (pValueItem->text().isEmpty() || pValueItem->text() == "--")
+    {
+        onAppendLog(tr("Write Value is error"));
+        return;
+    }
+
     m_pModbusHandler->tryWrite(pBlockItem->text(), pAddressItem->text(),
                                pValueItem->text(), ui->slaveSpinBox->value());
 }
