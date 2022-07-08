@@ -55,6 +55,7 @@ void MainWindow::init()
 
     connect(ui->connectPushButton, &QPushButton::clicked, this, &MainWindow::onConnectButtonClicked);
     connect(ui->readPushButton, &QPushButton::clicked, this, &MainWindow::onReadButtonClicked);
+    connect(ui->writePushButton, &QPushButton::clicked, this, &MainWindow::onWriteButtonClicked);
     connect(ui->appendPushButton, &QPushButton::clicked, this, &MainWindow::onAppendRowButtonClicked);
     connect(ui->removePushButton, &QPushButton::clicked, this, &MainWindow::onRemoveRowButtonClicked);
     connect(ui->insertPushButton, &QPushButton::clicked, this, &MainWindow::onInsertRowButtonClicked);
@@ -254,6 +255,18 @@ void MainWindow::onReadButtonClicked()
     m_pModbusHandler->tryRead(pBlockItem->text(), pAddressItem->text(), ui->slaveSpinBox->value());
 }
 
+void MainWindow::onWriteButtonClicked()
+{
+    if (m_nCurRow == -1)
+        return;
+
+    auto pBlockItem = ui->tableWidget->item(m_nCurRow, MainWindow::colBlock);
+    auto pAddressItem = ui->tableWidget->item(m_nCurRow, MainWindow::colAddress);
+    auto pValueItem = ui->tableWidget->item(m_nCurRow, MainWindow::colValue);
+    m_pModbusHandler->tryWrite(pBlockItem->text(), pAddressItem->text(),
+                               pValueItem->text(), ui->slaveSpinBox->value());
+}
+
 void MainWindow::onAppendRowButtonClicked()
 {
     int nRowCount = ui->tableWidget->rowCount();
@@ -311,11 +324,11 @@ void MainWindow::onModbusReceive(QString sBlockType, int nAddress, QVector<quint
         auto pBlockItem = ui->tableWidget->item(i, MainWindow::colBlock);
         auto pAddressItem = ui->tableWidget->item(i, MainWindow::colAddress);
         auto pValueItem = ui->tableWidget->item(i, MainWindow::colValue);
-        int nItemAddress = m_pModbusHandler->getAddressByString(pAddressItem->text());
+        int nItemAddress = m_pModbusHandler->getValueByString(pAddressItem->text());
         if (sBlockType == pBlockItem->text() &&
             nAddress == nItemAddress)
         {
-            QString sValue = m_pModbusHandler->getValueStringByNum(buffer.value(0));
+            QString sValue = m_pModbusHandler->getStringByValue(buffer.value(0));
             pValueItem->setText(sValue);
         }
     }

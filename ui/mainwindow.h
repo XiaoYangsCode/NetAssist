@@ -21,6 +21,7 @@ public:
 private slots:
     void onConnectButtonClicked();
     void onReadButtonClicked();
+    void onWriteButtonClicked();
     void onAppendRowButtonClicked();
     void onRemoveRowButtonClicked();
     void onInsertRowButtonClicked();
