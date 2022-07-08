@@ -82,13 +82,13 @@ void ModbusHandler::onReadReady()
         sBuffer.append("(");
         foreach(quint16 nValue, buffer)
         {
-            sBuffer.append(QString::number(nValue));
+            sBuffer.append(getStringByValue(nValue));
             sBuffer.append(", ");
         }
         sBuffer.append(")");
 
-        emit modbusLog(tr("Receive read data: BlockType %1, Start Address %2, Buffer %3")
-                       .arg(sBlockType, sAddress, sBuffer));
+        emit modbusLog(tr("Receive read data: BlockType %1, Start Address %2, Buffer %3, SlaveId %4")
+                       .arg(sBlockType, sAddress, sBuffer).arg(pReply->serverAddress()));
 
         if (buffer.count() > 0)
             emit modbusReceive(sBlockType, sAddress, buffer);
@@ -122,12 +122,13 @@ void ModbusHandler::onWriteReady()
         qDebug() << sMsg;
         emit modbusLog(tr("Receive write data: fail"));
     }
+    else
     {
         const QModbusDataUnit unit = pReply->result();
         QString sBlockType = getBlockStringByType(unit.registerType());
         QString sAddress = getStringByValue(unit.startAddress());
-        emit modbusLog(tr("Receive write data: BlockType %1, Start Address %2")
-                       .arg(sBlockType, sAddress));
+        emit modbusLog(tr("Receive write data: BlockType %1, Start Address %2, SlaveId %3")
+                       .arg(sBlockType, sAddress).arg(pReply->serverAddress()));
     }
 
     pReply->deleteLater();
